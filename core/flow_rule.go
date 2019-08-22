@@ -56,7 +56,7 @@ type rule struct {
 	controller_        TrafficShapingController
 }
 
-func (r *rule) PassCheck(ctx context.Context, node ResourceNode, count int) bool {
+func (r *rule) PassCheck(ctx context.Context, node *ResourceNode, count int) bool {
 
 	return true
 }

@@ -4,7 +4,6 @@ import (
 	"github.com/sentinel-group/sentinel-golang/core/util"
 	"log"
 	"sync"
-	"time"
 )
 
 var DefaultSlotChain = buildDefaultSlotChain()
@@ -118,18 +117,12 @@ func (sc *SlotChain) addStatSlotLast(s StatSlot) {
 	sc.stats = append(sc.stats, s)
 }
 
-// obtain context
-// from Pool or new one.
-func (sc *SlotChain) getCtx(rw ResourceWrapper, count int64, args ...interface{}) *Context {
-
-	return nil
-}
-
 // The entrance of Slot Chain
 func (sc *SlotChain) Entry(ctx *Context) {
-	startTime := time.Now()
-
+	log.Println("slot chain entry")
+	startTime := util.GetTimeMilli()
 	// prepare slot
+	log.Println("prepare slot")
 	sps := sc.statPres
 	if len(sps) > 0 {
 		for _, s := range sps {
@@ -138,6 +131,7 @@ func (sc *SlotChain) Entry(ctx *Context) {
 	}
 
 	// rule base check
+	log.Println("rule base slot check")
 	rcs := sc.ruleChecks
 	ruleCheckRet := NewSlotResultPass()
 	if len(rcs) > 0 {
@@ -148,11 +142,14 @@ func (sc *SlotChain) Entry(ctx *Context) {
 				continue
 			}
 			// block or other logic
+			log.Printf("%v check fail, reason is %s \n", s, sr.BlockedMsg)
 			ruleCheckRet.Status = ResultStatusBlocked
 			break
 		}
 	}
 
+	// statistic slot
+	log.Println("statistic slot")
 	ss := sc.stats
 	if len(ss) > 0 {
 		for _, s := range ss {
@@ -164,18 +161,18 @@ func (sc *SlotChain) Entry(ctx *Context) {
 			}
 		}
 	}
-
 	LogAccess(ctx, startTime)
 }
 
 func (sc *SlotChain) Exit(ctx *Context) {
-	startTime := time.Now()
+	log.Println("slot chain exit")
+	startTime := util.GetTimeMilli()
 	for _, s := range sc.stats {
 		s.OnCompleted(ctx)
 	}
 	LogAccess(ctx, startTime)
 }
 
-func LogAccess(ctx *Context, startTime time.Time) {
-	log.Println("start:", startTime.UnixNano()/1e6, "end:", util.GetTimeMilli())
+func LogAccess(ctx *Context, startTime uint64) {
+	log.Println("start:", startTime, "end:", util.GetTimeMilli())
 }

@@ -17,11 +17,18 @@ func FindNode(rw *ResourceWrapper) *ResourceNode {
 		lock.Lock()
 		n, ok := NodeHolder[rw.ResourceName]
 		if !ok {
+			//double confirm
 			n = NewResourceNode(rw)
-			NodeHolder[rw.ResourceName] = n
+			cacheNodeHold := make(map[string]*ResourceNode)
+			for k, v := range NodeHolder {
+				cacheNodeHold[k] = v
+			}
+			cacheNodeHold[rw.ResourceName] = n
+			NodeHolder = cacheNodeHold
 		}
-		node = n
 		lock.Unlock()
+		return NodeHolder[rw.ResourceName]
+	} else {
+		return node
 	}
-	return node
 }

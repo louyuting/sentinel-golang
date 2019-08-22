@@ -60,3 +60,7 @@ func (e *CtEntry) exitForContext(ctx *Context, count int32) {
 		e.sc.Exit(ctx)
 	}
 }
+
+func (e *CtEntry) GetCurrentNode() *ResourceNode {
+	return e.currentNode
+}

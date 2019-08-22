@@ -1,14 +1,30 @@
 package main
 
 import (
-	"fmt"
 	"github.com/sentinel-group/sentinel-golang/core"
-	"github.com/sentinel-group/sentinel-golang/core/log"
+	internalLog "github.com/sentinel-group/sentinel-golang/core/log"
+	"log"
+	"time"
 )
 
 func main() {
-	fmt.Println("=================start=================")
-	log.Init()
-	core.Entry1("aaaaaa")
-	fmt.Println("=================end=================")
+	internalLog.Init()
+	log.Println("=================start=================")
+	cxe := core.Entry("aaaaaa")
+	//
+	time.Sleep(time.Second * 1)
+	log.Println("Call service")
+
+	cxe.Exit1()
+
+	if cxe.GetCurrentNode().TotalSuccess() == 1 {
+		log.Println("total success == 1")
+	}
+	if cxe.GetCurrentNode().TotalRequest() == 1 {
+		log.Println("total request == 1")
+	}
+	if cxe.GetCurrentNode().TotalPass() == 1 {
+		log.Println("total pass == 1")
+	}
+	log.Println("=================end=================")
 }

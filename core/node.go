@@ -26,7 +26,7 @@ func NewResourceNode(wrapper *ResourceWrapper) *ResourceNode {
 		currentGoroutineNum:    0,
 		lastFetchTime:          util.GetTimeMilli(),
 		rollingCounterInSecond: statistic.NewArrayMetric(sampleCount_, intervalInMs_),
-		rollingCounterInMinute: statistic.NewArrayMetric(sampleCount_, intervalInMs_),
+		rollingCounterInMinute: statistic.NewArrayMetric(sampleCount_, 60*1000),
 	}
 }
 

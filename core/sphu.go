@@ -1,8 +1,7 @@
 package core
 
-// Check all rules about th resource
-// return the entry
-func Entry1(name string) *CtEntry {
+// Check all rules about the resource
+func Entry(name string) *CtEntry {
 	return Entry2(name, 1)
 }
 
