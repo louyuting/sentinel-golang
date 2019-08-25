@@ -15,7 +15,7 @@ const (
 
 //Test sliding windows create windows
 func TestNewWindow(t *testing.T) {
-	slidingWindow := NewSlidingWindow(SampleCount, IntervalInMs)
+	slidingWindow := newSlidingWindow(SampleCount, IntervalInMs)
 	time := util.GetTimeMilli()
 
 	wr, err := slidingWindow.data.CurrentWindowWithTime(time, slidingWindow)
@@ -41,7 +41,7 @@ func TestNewWindow(t *testing.T) {
 
 // Test the logic get window start time.
 func TestLeapArrayWindowStart(t *testing.T) {
-	slidingWindow := NewSlidingWindow(SampleCount, IntervalInMs)
+	slidingWindow := newSlidingWindow(SampleCount, IntervalInMs)
 	firstTime := util.GetTimeMilli()
 	previousWindowStart := firstTime - firstTime%uint64(WindowLengthImMs)
 
@@ -59,7 +59,7 @@ func TestLeapArrayWindowStart(t *testing.T) {
 
 // test sliding window has multi windows
 func TestWindowAfterOneInterval(t *testing.T) {
-	slidingWindow := NewSlidingWindow(SampleCount, IntervalInMs)
+	slidingWindow := newSlidingWindow(SampleCount, IntervalInMs)
 	firstTime := util.GetTimeMilli()
 	previousWindowStart := firstTime - firstTime%uint64(WindowLengthImMs)
 
@@ -76,7 +76,7 @@ func TestWindowAfterOneInterval(t *testing.T) {
 	if wr.value == nil {
 		t.Errorf("Unexcepted error")
 	}
-	mb, ok := wr.value.(*MetricBucket)
+	mb, ok := wr.value.(*metricBucket)
 	if !ok {
 		t.Errorf("Unexcepted error")
 	}
@@ -106,7 +106,7 @@ func TestWindowAfterOneInterval(t *testing.T) {
 	if wr2.windowStart != previousWindowStart {
 		t.Errorf("Unexpected error, winStart is not same")
 	}
-	mb2, ok := wr2.value.(*MetricBucket)
+	mb2, ok := wr2.value.(*metricBucket)
 	if !ok {
 		t.Errorf("Unexcepted error")
 	}
@@ -132,7 +132,7 @@ func TestWindowAfterOneInterval(t *testing.T) {
 	if (wr3.windowStart - uint64(WindowLengthImMs)) != previousWindowStart {
 		t.Errorf("Unexpected error")
 	}
-	mb3, ok := wr3.value.(*MetricBucket)
+	mb3, ok := wr3.value.(*metricBucket)
 	if !ok {
 		t.Errorf("Unexcepted error")
 	}
@@ -154,12 +154,12 @@ func TestNTimeMultiGoroutineUpdateEmptyWindow(t *testing.T) {
 	}
 }
 
-func _task(wg *sync.WaitGroup, slidingWindow *SlidingWindow, ti uint64, t *testing.T, ct *uint64) {
+func _task(wg *sync.WaitGroup, slidingWindow *slidingWindow, ti uint64, t *testing.T, ct *uint64) {
 	wr, err := slidingWindow.data.CurrentWindowWithTime(ti, slidingWindow)
 	if err != nil {
 		t.Errorf("Unexcepted error")
 	}
-	mb, ok := wr.value.(*MetricBucket)
+	mb, ok := wr.value.(*metricBucket)
 	if !ok {
 		t.Errorf("Unexcepted error")
 	}
@@ -172,7 +172,7 @@ func _task(wg *sync.WaitGroup, slidingWindow *SlidingWindow, ti uint64, t *testi
 }
 
 func _nTestMultiGoroutineUpdateEmptyWindow(t *testing.T) {
-	slidingWindow := NewSlidingWindow(SampleCount, IntervalInMs)
+	slidingWindow := newSlidingWindow(SampleCount, IntervalInMs)
 	firstTime := util.GetTimeMilli()
 
 	const GoroutineNum = 1000
@@ -192,7 +192,7 @@ func _nTestMultiGoroutineUpdateEmptyWindow(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexcepted error")
 	}
-	mb2, ok := wr2.value.(*MetricBucket)
+	mb2, ok := wr2.value.(*metricBucket)
 	if !ok {
 		t.Errorf("Unexcepted error")
 	}

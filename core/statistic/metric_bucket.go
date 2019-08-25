@@ -8,96 +8,96 @@ import (
 type MetricEventType int8
 
 const (
-	// PASS + BLOCK ==  all traffic
+	// PASS + BLOCK == all traffic
 	// sentinel rules check pass
 	MetricEventPass MetricEventType = iota
 	// sentinel rules check block
 	MetricEventBlock
-	// app execute success
-	// the request pass is not always success
+	// Success + Error == Pass
 	MetricEventSuccess
 	// app execute error
 	MetricEventError
+	// request execute rt, unit is millisecond
 	MetricEventRt
 	// hack for getting length of enum
 	metricEventNum
 )
 
-/**
-MetricBucket store the metric statistic of each event
-(MetricEventPass、MetricEventBlock、MetricEventError、MetricEventSuccess、MetricEventRt)
-*/
-type MetricBucket struct {
+// metricBucket is storage entity for the metric statistic
+// event type contains (MetricEventPass、MetricEventBlock、MetricEventError、MetricEventSuccess、MetricEventRt)
+// the statistic of metricBucket must be concurrent safe.
+type metricBucket struct {
 	// value of statistic
-	counters [metricEventNum]uint64
-	minRt    uint64
+	counter [metricEventNum]uint64
+	// record the min rt for this bucket
+	minRt uint64
 }
 
-func newEmptyMetricBucket() *MetricBucket {
-	mb := &MetricBucket{
+func newMetricBucket() *metricBucket {
+	mb := &metricBucket{
 		minRt: math.MaxUint64,
 	}
 	return mb
 }
 
-func (mb *MetricBucket) Add(event MetricEventType, count uint64) {
+func (mb *metricBucket) Add(event MetricEventType, count uint64) {
 	if event > metricEventNum {
 		panic("event is bigger then metricEventNum")
 	}
-	atomic.AddUint64(&mb.counters[event], count)
+	atomic.AddUint64(&mb.counter[event], count)
 }
 
-func (mb *MetricBucket) Get(event MetricEventType) uint64 {
+func (mb *metricBucket) Get(event MetricEventType) uint64 {
 	if event > metricEventNum {
 		panic("event is bigger then metricEventNum")
 	}
-	return mb.counters[event]
+	return mb.counter[event]
 }
 
-func (mb *MetricBucket) MinRt() uint64 {
+func (mb *metricBucket) MinRt() uint64 {
 	return mb.minRt
 }
 
-func (mb *MetricBucket) Reset() {
+func (mb *metricBucket) Reset() {
 	for i := 0; i < int(metricEventNum); i++ {
-		atomic.StoreUint64(&mb.counters[i], 0)
+		atomic.StoreUint64(&mb.counter[i], 0)
 	}
 	atomic.StoreUint64(&mb.minRt, math.MaxUint64)
 }
 
-func (mb *MetricBucket) AddPass(n uint64) {
+func (mb *metricBucket) AddPass(n uint64) {
 	mb.Add(MetricEventPass, n)
 }
 
-func (mb *MetricBucket) Pass() uint64 {
+func (mb *metricBucket) Pass() uint64 {
 	return mb.Get(MetricEventPass)
 }
 
-func (mb *MetricBucket) AddBlock(n uint64) {
+func (mb *metricBucket) AddBlock(n uint64) {
 	mb.Add(MetricEventBlock, n)
 }
 
-func (mb *MetricBucket) Block() uint64 {
+func (mb *metricBucket) Block() uint64 {
 	return mb.Get(MetricEventBlock)
 }
 
-func (mb *MetricBucket) AddSuccess(n uint64) {
+func (mb *metricBucket) AddSuccess(n uint64) {
 	mb.Add(MetricEventSuccess, n)
 }
 
-func (mb *MetricBucket) Success() uint64 {
+func (mb *metricBucket) Success() uint64 {
 	return mb.Get(MetricEventSuccess)
 }
 
-func (mb *MetricBucket) AddError(n uint64) {
+func (mb *metricBucket) AddError(n uint64) {
 	mb.Add(MetricEventError, n)
 }
 
-func (mb *MetricBucket) Error() uint64 {
+func (mb *metricBucket) Error() uint64 {
 	return mb.Get(MetricEventError)
 }
 
-func (mb *MetricBucket) AddRt(rt uint64) {
+func (mb *metricBucket) AddRt(rt uint64) {
 	mb.Add(MetricEventRt, rt)
 	// Not thread-safe, but it's okay.
 	if rt < mb.minRt {
@@ -105,6 +105,6 @@ func (mb *MetricBucket) AddRt(rt uint64) {
 	}
 }
 
-func (mb *MetricBucket) Rt() uint64 {
+func (mb *metricBucket) Rt() uint64 {
 	return mb.Get(MetricEventRt)
 }

@@ -1,15 +1,15 @@
 package statistic
 
-// The basic metric statistic interface in Sentinel using a internal SlidingWindow.
+// The basic metric statistic interface in Sentinel using a internal slidingWindow.
 type ArrayMetric struct {
-	data         *SlidingWindow
+	data         *slidingWindow
 	sampleCount  uint32
 	intervalInMs uint32
 }
 
 func NewArrayMetric(sampleCount, intervalInMs uint32) *ArrayMetric {
 	return &ArrayMetric{
-		data:         NewSlidingWindow(sampleCount, intervalInMs),
+		data:         newSlidingWindow(sampleCount, intervalInMs),
 		sampleCount:  sampleCount,
 		intervalInMs: intervalInMs,
 	}
