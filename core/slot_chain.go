@@ -35,14 +35,6 @@ type StatSlot interface {
 	OnCompleted(ctx *Context)
 }
 
-type SlotType int8
-
-const (
-	StatisticPrepare SlotType = iota
-	RuleCheck
-	Statistic
-)
-
 //
 type SlotChain struct {
 	statPres   []StatPrepareSlot
