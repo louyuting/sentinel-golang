@@ -12,6 +12,32 @@ const (
 	intervalInMs_     uint32 = 1000
 )
 
+type node interface {
+	IncreasePassRequest(count uint64)
+	IncreaseBlockRequest(count uint64)
+	IncreaseErrorRequest(count uint64)
+	IncreaseSuccessRequest(count uint64)
+
+	TotalRequest() uint64
+	TotalPass() uint64
+	TotalBlock() uint64
+	TotalSuccess() uint64
+	TotalError() uint64
+
+	RequestQps() uint64
+	PassQps() uint64
+	BlockQps() uint64
+	SuccessQps() uint64
+	ErrorQps() uint64
+
+	AddRt(rt uint64)
+	AvgRt() uint64
+
+	IncreaseGoroutineNum()
+	DecreaseGoroutineNum()
+	CurGoroutineNum() int64
+}
+
 type ResourceNode struct {
 	rollingCounterInSecond *statistic.ArrayMetric
 	rollingCounterInMinute *statistic.ArrayMetric

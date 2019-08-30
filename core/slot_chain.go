@@ -113,6 +113,16 @@ func (sc *SlotChain) addStatSlotLast(s StatSlot) {
 func (sc *SlotChain) Entry(ctx *Context) {
 	log.Println("slot chain entry")
 	startTime := util.GetTimeMilli()
+
+	// This should not happen, unless there are errors existing in Sentinel internal.
+	// defer to handle it
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("unknown panic for Sentinel internal exception, err: %v  \n", err)
+			return
+		}
+	}()
+
 	// prepare slot
 	log.Println("prepare slot")
 	sps := sc.statPres

@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 )
 
 func init() {
@@ -188,8 +189,8 @@ type FlowSlotMock struct {
 }
 
 func (m *FlowSlotMock) Check(ctx *Context) *RuleCheckResult {
-	m.Called(ctx)
-	return NewSlotResultPass()
+	arg := m.Called(ctx)
+	return arg.Get(0).(*RuleCheckResult)
 }
 
 type DegradeSlotMock struct {
@@ -197,8 +198,8 @@ type DegradeSlotMock struct {
 }
 
 func (m *DegradeSlotMock) Check(ctx *Context) *RuleCheckResult {
-	m.Called(ctx)
-	return NewSlotResultPass()
+	arg := m.Called(ctx)
+	return arg.Get(0).(*RuleCheckResult)
 }
 
 type StatisticSlotMock struct {
@@ -218,7 +219,7 @@ func (m *StatisticSlotMock) OnCompleted(ctx *Context) {
 	return
 }
 
-func TestSlotChain_Entry(t *testing.T) {
+func TestSlotChain_Entry_Pass(t *testing.T) {
 	sc := newSlotChain()
 	ctx := sc.GetContext()
 	rw := &ResourceWrapper{
@@ -252,4 +253,127 @@ func TestSlotChain_Entry(t *testing.T) {
 	ssm.AssertNumberOfCalls(t, "OnEntryPassed", 1)
 	ssm.AssertNumberOfCalls(t, "OnEntryBlocked", 0)
 	ssm.AssertNumberOfCalls(t, "OnCompleted", 0)
+}
+
+func TestSlotChain_Entry_Block(t *testing.T) {
+	sc := newSlotChain()
+	ctx := sc.GetContext()
+	rw := &ResourceWrapper{
+		ResourceName: "abc",
+		FlowType:     InBound,
+	}
+	ctx.ResWrapper = rw
+	ctx.Node = FindNode(rw)
+	ctx.Count = 1
+	ctx.Entry = NewCtEntry(ctx, rw, sc, ctx.Node)
+
+	rbs := &ResourceBuilderSlotMock{}
+	fsm := &FlowSlotMock{}
+	dsm := &DegradeSlotMock{}
+	ssm := &StatisticSlotMock{}
+	sc.addStatPrepareSlotFirst(rbs)
+	sc.addRuleCheckSlotFirst(fsm)
+	sc.addRuleCheckSlotLast(dsm)
+	sc.addStatSlotFirst(ssm)
+
+	rbs.On("Prepare", mock.Anything).Return()
+	fsm.On("Check", mock.Anything).Return(NewSlotResultPass())
+	dsm.On("Check", mock.Anything).Return(NewSlotResultBlock("blocked"))
+	ssm.On("OnEntryPassed", mock.Anything).Return()
+	ssm.On("OnEntryBlocked", mock.Anything).Return()
+
+	sc.Entry(ctx)
+
+	rbs.AssertNumberOfCalls(t, "Prepare", 1)
+	fsm.AssertNumberOfCalls(t, "Check", 1)
+	dsm.AssertNumberOfCalls(t, "Check", 1)
+	ssm.AssertNumberOfCalls(t, "OnEntryPassed", 0)
+	ssm.AssertNumberOfCalls(t, "OnEntryBlocked", 1)
+	ssm.AssertNumberOfCalls(t, "OnCompleted", 0)
+}
+
+type ResourceBuilderSlotMockPanic struct {
+	mock.Mock
+}
+
+func (m *ResourceBuilderSlotMockPanic) Prepare(ctx *Context) {
+	m.Called(ctx)
+	panic("unexpected panic")
+	return
+}
+
+func TestSlotChain_Entry_Panic(t *testing.T) {
+	sc := newSlotChain()
+	ctx := sc.GetContext()
+	rw := &ResourceWrapper{
+		ResourceName: "abc",
+		FlowType:     InBound,
+	}
+	ctx.ResWrapper = rw
+	ctx.Node = FindNode(rw)
+	ctx.Count = 1
+	ctx.Entry = NewCtEntry(ctx, rw, sc, ctx.Node)
+
+	rbs := &ResourceBuilderSlotMockPanic{}
+	fsm := &FlowSlotMock{}
+	dsm := &DegradeSlotMock{}
+	ssm := &StatisticSlotMock{}
+	sc.addStatPrepareSlotFirst(rbs)
+	sc.addRuleCheckSlotFirst(fsm)
+	sc.addRuleCheckSlotLast(dsm)
+	sc.addStatSlotFirst(ssm)
+
+	rbs.On("Prepare", mock.Anything).Return()
+	fsm.On("Check", mock.Anything).Return(NewSlotResultPass())
+	dsm.On("Check", mock.Anything).Return(NewSlotResultBlock("blocked"))
+	ssm.On("OnEntryPassed", mock.Anything).Return()
+	ssm.On("OnEntryBlocked", mock.Anything).Return()
+
+	sc.Entry(ctx)
+
+	rbs.AssertNumberOfCalls(t, "Prepare", 1)
+	fsm.AssertNumberOfCalls(t, "Check", 0)
+	dsm.AssertNumberOfCalls(t, "Check", 0)
+	ssm.AssertNumberOfCalls(t, "OnEntryPassed", 0)
+	ssm.AssertNumberOfCalls(t, "OnEntryBlocked", 0)
+	ssm.AssertNumberOfCalls(t, "OnCompleted", 0)
+}
+
+func TestSlotChain_Exit(t *testing.T) {
+	sc := newSlotChain()
+	ctx := sc.GetContext()
+	rw := &ResourceWrapper{
+		ResourceName: "abc",
+		FlowType:     InBound,
+	}
+	ctx.ResWrapper = rw
+	ctx.Node = FindNode(rw)
+	ctx.Count = 1
+	ctx.Entry = NewCtEntry(ctx, rw, sc, ctx.Node)
+
+	rbs := &ResourceBuilderSlotMock{}
+	fsm := &FlowSlotMock{}
+	dsm := &DegradeSlotMock{}
+	ssm := &StatisticSlotMock{}
+	sc.addStatPrepareSlotFirst(rbs)
+	sc.addRuleCheckSlotFirst(fsm)
+	sc.addRuleCheckSlotFirst(dsm)
+	sc.addStatSlotFirst(ssm)
+
+	rbs.On("Prepare", mock.Anything)
+	fsm.On("Check", mock.Anything).Return(NewSlotResultPass())
+	dsm.On("Check", mock.Anything).Return(NewSlotResultPass())
+	ssm.On("OnEntryPassed", mock.Anything).Return()
+	ssm.On("OnCompleted", mock.Anything).Return()
+
+	sc.Entry(ctx)
+	time.Sleep(time.Millisecond * 100)
+	ctx.Entry.Exit1()
+
+	rbs.AssertNumberOfCalls(t, "Prepare", 1)
+	fsm.AssertNumberOfCalls(t, "Check", 1)
+	dsm.AssertNumberOfCalls(t, "Check", 1)
+	ssm.AssertNumberOfCalls(t, "OnEntryPassed", 1)
+	ssm.AssertNumberOfCalls(t, "OnEntryBlocked", 0)
+	ssm.AssertNumberOfCalls(t, "OnCompleted", 1)
 }

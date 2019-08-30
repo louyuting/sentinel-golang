@@ -31,7 +31,7 @@ const (
 type FlowGradeType int8
 
 const (
-	FlowGradeThread FlowGradeType = iota
+	FlowGradeGoroutine FlowGradeType = iota
 	FlowGradeQps
 )
 

@@ -18,7 +18,7 @@ func (fs *FlowSlot) Check(ctx *Context) *RuleCheckResult {
 	}
 	rw := ctx.ResWrapper
 	node := ctx.Node
-	count := 0
+	count := uint64(0)
 	rules := fs.rm.getRuleBySource(rw.ResourceName)
 	if len(rules) == 0 {
 		return NewSlotResultPass()
@@ -34,18 +34,18 @@ func (fs *FlowSlot) Check(ctx *Context) *RuleCheckResult {
 func (fs *FlowSlot) Exit(ctx *Context) {
 }
 
-func checkFlow(ctx *Context, resourceWrap *ResourceWrapper, rules []*rule, node *ResourceNode, count int) bool {
+func checkFlow(ctx *Context, resourceWrap *ResourceWrapper, rules []*rule, node *ResourceNode, count uint64) bool {
 	if rules == nil {
 		return true
 	}
 	for _, rule := range rules {
-		if !canPass(ctx, resourceWrap, rule, node, uint32(count)) {
+		if !canPass(ctx, resourceWrap, rule, node, count) {
 			return false
 		}
 	}
 	return true
 }
 
-func canPass(ctx *Context, resourceWrap *ResourceWrapper, rule *rule, node *ResourceNode, count uint32) bool {
+func canPass(ctx *Context, resourceWrap *ResourceWrapper, rule *rule, node *ResourceNode, count uint64) bool {
 	return rule.controller_.CanPass(ctx, node, count)
 }
