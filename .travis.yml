@@ -16,13 +16,13 @@ before_install:
 script:
   - diff -u <(echo -n) <(gofmt -d -s .)
   - diff -u <(echo -n) <(goimports -d .)
-  - go test -v -race ./... -coverprofile=coverage.txt -covermode=atomic
   - golangci-lint run -v --disable-all
     --enable=govet
     --enable=staticcheck
     --enable=ineffassign
     --enable=misspell
     ./...
+  - go test -v -race ./... -coverprofile=coverage.txt -covermode=atomic
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
