@@ -1,0 +1,45 @@
+apiVersion: datasource.sentinel.com/v1
+kind: HotspotRules
+metadata:
+  name: example-hotspotrules
+spec:
+  # Add fields here
+  rules:
+    - resource: abc
+      metricType: 0
+      controlBehavior: 0
+      paramIndex: 0
+      threshold: 1000
+      maxQueueingTimeMs: 1
+      burstCount: 10
+      durationInSec: 1
+      paramsMaxCapacity: 10000
+      specificItems:
+        - valKind: 0
+          valStr: 1000
+          specificThreshold: 10001
+        - valKind: 1
+          valStr: ximu
+          specificThreshold: 10002
+        - valKind: 2
+          valStr: true
+          specificThreshold: 10003
+    - resource: abc
+      metricType: 1
+      controlBehavior: 0
+      paramIndex: 2
+      threshold: 3000
+      maxQueueingTimeMs: 3
+      burstCount: 30
+      durationInSec: 3
+      paramsMaxCapacity: 30000
+      specificItems:
+        - valKind: 0
+          valStr: 1000
+          specificThreshold: 30001
+        - valKind: 1
+          valStr: ximu
+          specificThreshold: 30002
+        - valKind: 2
+          valStr: true
+          specificThreshold: 30003

@@ -1,0 +1,26 @@
+apiVersion: datasource.sentinel.com/v1
+kind: CircuitBreakerRules
+metadata:
+  name: example-circuitbreakerrules
+spec:
+  # Add fields here
+  rules:
+    - resource: test1
+      strategy: 0
+      statIntervalMs: 10000
+      retryTimeoutMs: 500
+      minRequestAmount: 10
+      maxAllowedRtMs: 100
+      maxSlowRequestRatio: 0.1
+    - resource: test1
+      strategy: 1
+      statIntervalMs: 10000
+      retryTimeoutMs: 500
+      minRequestAmount: 10
+      errorRatioThreshold: 0.2
+    - resource: test1
+      strategy: 1
+      statIntervalMs: 10000
+      retryTimeoutMs: 500
+      minRequestAmount: 10
+      errorCountThreshold: 20
