@@ -9,6 +9,8 @@ import (
 	"github.com/apache/dubbo-go/protocol"
 )
 
+type contextEntryKey string
+
 const (
 	ProviderFilterName = "sentinel-provider"
 	ConsumerFilterName = "sentinel-consumer"
@@ -16,8 +18,8 @@ const (
 	DefaultProviderPrefix = "dubbo:provider:"
 	DefaultConsumerPrefix = "dubbo:consumer:"
 
-	MethodEntryKey    = "$$sentinelMethodEntry"
-	InterfaceEntryKey = "$$sentinelInterfaceEntry"
+	MethodEntryKey    contextEntryKey = "$$sentinelMethodEntry"
+	InterfaceEntryKey contextEntryKey = "$$sentinelInterfaceEntry"
 )
 
 // Currently, a ConcurrentHashMap mechanism is missing.

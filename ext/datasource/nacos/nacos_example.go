@@ -26,11 +26,16 @@ var clientConfigTest = constant.ClientConfig{
 
 func createConfigClientTest() (*config_client.ConfigClient, error) {
 	nc := nacos_client.NacosClient{}
-	err := nc.SetServerConfig([]constant.ServerConfig{serverConfig})
-	err = nc.SetClientConfig(clientConfigTest)
-	err = nc.SetHttpAgent(&http_agent.HttpAgent{})
+	if err := nc.SetServerConfig([]constant.ServerConfig{serverConfig}); err != nil {
+		return nil, err
+	}
+	if err := nc.SetClientConfig(clientConfigTest); err != nil {
+		return nil, err
+	}
+	if err := nc.SetHttpAgent(&http_agent.HttpAgent{}); err != nil {
+		return nil, err
+	}
 	client, err := config_client.NewConfigClient(&nc)
-
 	return &client, err
 }
 
