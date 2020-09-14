@@ -1,4 +1,4 @@
-module github.com/alibaba/sentinel-golang/sentinel-go-adapter-echo
+module github.com/louyuting/sentinel-golang/sentinel-go-adapter-echo
 
 go 1.13
 

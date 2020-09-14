@@ -1,4 +1,4 @@
-module github.com/alibaba/sentinel-golang/sentinel-go-adapter-gin
+module github.com/louyuting/sentinel-golang/sentinel-go-adapter-gin
 
 go 1.13
 

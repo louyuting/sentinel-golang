@@ -1,4 +1,4 @@
-module github.com/alibaba/sentinel-golang/sentinel-go-adapter-micro
+module github.com/louyuting/sentinel-golang/sentinel-go-adapter-micro
 
 go 1.13
 

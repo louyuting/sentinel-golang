@@ -1,4 +1,4 @@
-module github.com/alibaba/sentinel-golang/sentinel-go-adapter-grpc
+module github.com/louyuting/sentinel-golang/sentinel-go-adapter-grpc
 
 go 1.13
 

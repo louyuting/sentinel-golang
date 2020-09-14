@@ -1,4 +1,4 @@
-module github.com/alibaba/sentinel-golang
+module github.com/louyuting/sentinel-golang
 
 go 1.13
 
