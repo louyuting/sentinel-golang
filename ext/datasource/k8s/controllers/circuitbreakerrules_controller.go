@@ -18,11 +18,10 @@ package controllers
 
 import (
 	"context"
-	"errors"
-	datasourcev1 "sentinel-go-k8s-crd-datasource/api/v1"
 
 	"github.com/alibaba/sentinel-golang/core/circuitbreaker"
-	"github.com/go-logr/logr"
+	datasourcev1 "github.com/alibaba/sentinel-golang/ext/datasource/k8s/api/v1"
+	"github.com/alibaba/sentinel-golang/logging"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,8 +30,8 @@ import (
 // CircuitBreakerRulesReconciler reconciles a CircuitBreakerRules object
 type CircuitBreakerRulesReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Scheme          *runtime.Scheme
+	EffectiveCrName string
 }
 
 const (
@@ -46,22 +45,30 @@ const (
 
 func (r *CircuitBreakerRulesReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	log := r.Log.WithValues("circuit breaker rules", req.NamespacedName)
+	logging.Info("receive CircuitBreakerRules", "namespace", req.NamespacedName.String())
+
+	if req.Name != r.EffectiveCrName {
+		logging.Warn("ignore unregister cr.", "ns", req.Namespace, "crName", req.Name)
+		return ctrl.Result{
+			Requeue:      false,
+			RequeueAfter: 0,
+		}, nil
+	}
 
 	cbRulesCR := &datasourcev1.CircuitBreakerRules{}
 	if err := r.Get(ctx, req.NamespacedName, cbRulesCR); err != nil {
-		log.Error(err, "Fail to get datasourcev1.CircuitBreakerRules.")
+		logging.Error(err, "Fail to get datasourcev1.CircuitBreakerRules.")
 		return ctrl.Result{
 			Requeue:      false,
 			RequeueAfter: 0,
 		}, err
 	}
-	log.Info("Receive datasourcev1.CircuitBreakerRules", "rules:", cbRulesCR.Spec.Rules)
+	logging.Info("Get datasourcev1.CircuitBreakerRules", "rules:", cbRulesCR.Spec.Rules)
 
 	cbRules := r.assembleCircuitBreakerRules(cbRulesCR)
 	_, err := circuitbreaker.LoadRules(cbRules)
 	if err != nil {
-		log.Error(err, "Fail to Load circuitbreaker.Rules")
+		logging.Error(err, "Fail to Load circuitbreaker.Rules")
 		return ctrl.Result{
 			Requeue:      false,
 			RequeueAfter: 0,
@@ -93,7 +100,7 @@ func (r *CircuitBreakerRulesReconciler) assembleCircuitBreakerRules(rs *datasour
 			cbRule.Strategy = circuitbreaker.ErrorCount
 			cbRule.Threshold = float64(rule.Threshold)
 		default:
-			r.Log.Error(errors.New("unsupported circuit breaker strategy"), rule.Strategy)
+			logging.Error("unsupported circuit breaker strategy", "strategy", rule.Strategy)
 			continue
 		}
 

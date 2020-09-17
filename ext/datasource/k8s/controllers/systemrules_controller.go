@@ -18,23 +18,20 @@ package controllers
 
 import (
 	"context"
-	"errors"
 
 	"github.com/alibaba/sentinel-golang/core/system"
-
-	"github.com/go-logr/logr"
+	datasourcev1 "github.com/alibaba/sentinel-golang/ext/datasource/k8s/api/v1"
+	"github.com/alibaba/sentinel-golang/logging"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	datasourcev1 "sentinel-go-k8s-crd-datasource/api/v1"
 )
 
 // SystemRulesReconciler reconciles a SystemRules object
 type SystemRulesReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Scheme          *runtime.Scheme
+	EffectiveCrName string
 }
 
 // +kubebuilder:rbac:groups=datasource.sentinel.io,resources=systemrules,verbs=get;list;watch;create;update;patch;delete
@@ -42,23 +39,31 @@ type SystemRulesReconciler struct {
 
 func (r *SystemRulesReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	log := r.Log.WithValues("system rules", req.NamespacedName)
+	logging.Info("receive SystemRules", "namespace", req.NamespacedName.String())
+
+	if req.Name != r.EffectiveCrName {
+		logging.Warn("ignore unregister cr.", "ns", req.Namespace, "crName", req.Name)
+		return ctrl.Result{
+			Requeue:      false,
+			RequeueAfter: 0,
+		}, nil
+	}
 
 	systemRulesCR := &datasourcev1.SystemRules{}
 	if err := r.Get(ctx, req.NamespacedName, systemRulesCR); err != nil {
-		log.Error(err, "Fail to get datasourcev1.SystemRules")
+		logging.Error(err, "Fail to get datasourcev1.SystemRules")
 		return ctrl.Result{
 			Requeue:      false,
 			RequeueAfter: 0,
 		}, err
 	}
 
-	log.Info("Receive datasourcev1.SystemRules", "rules:", systemRulesCR.Spec.Rules)
+	logging.Info("Receive datasourcev1.SystemRules", "rules:", systemRulesCR.Spec.Rules)
 
 	systemRules := r.assembleSystemRules(systemRulesCR)
 	_, err := system.LoadRules(systemRules)
 	if err != nil {
-		log.Error(err, "Fail to Load system.Rules")
+		logging.Error(err, "Fail to Load system.Rules")
 		return ctrl.Result{
 			Requeue:      false,
 			RequeueAfter: 0,
@@ -93,7 +98,7 @@ func (r *SystemRulesReconciler) assembleSystemRules(rs *datasourcev1.SystemRules
 			systemRule.MetricType = system.CpuUsage
 			systemRule.TriggerCount = float64(rule.TriggerCount) / 100
 		default:
-			r.Log.Error(errors.New("unsupported MetricType for system.Rule"), rule.MetricType)
+			logging.Error("unsupported MetricType for system.Rule", "metricType", rule.MetricType)
 			continue
 		}
 		switch rule.Strategy {
@@ -102,7 +107,7 @@ func (r *SystemRulesReconciler) assembleSystemRules(rs *datasourcev1.SystemRules
 		case "BBR":
 			systemRule.Strategy = system.BBR
 		default:
-			r.Log.Error(errors.New("unsupported Strategy for system.Rule"), rule.Strategy)
+			logging.Error("unsupported Strategy for system.Rule", "strategy", rule.Strategy)
 			continue
 		}
 		ret = append(ret, systemRule)

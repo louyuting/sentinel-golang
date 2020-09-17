@@ -3,6 +3,7 @@ package logging
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 )
@@ -68,6 +69,8 @@ func NewSimpleFileLogger(filepath, namespace string, flag int) (Logger, error) {
 }
 
 type Logger interface {
+	Writer() io.Writer
+
 	Debug(v ...interface{})
 	Debugf(format string, v ...interface{})
 
@@ -97,6 +100,10 @@ type DefaultLogger struct {
 
 func merge(namespace, logLevel, msg string) string {
 	return fmt.Sprintf("[%s] [%s] %s", namespace, logLevel, msg)
+}
+
+func (l *DefaultLogger) Writer() io.Writer {
+	return l.log.Writer()
 }
 
 func (l *DefaultLogger) Debug(v ...interface{}) {
@@ -229,4 +236,8 @@ func Panic(v ...interface{}) {
 
 func Panicf(format string, v ...interface{}) {
 	globalLogger.Panicf(format, v...)
+}
+
+func Writer() io.Writer {
+	return globalLogger.Writer()
 }

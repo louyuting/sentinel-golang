@@ -18,23 +18,20 @@ package controllers
 
 import (
 	"context"
-	"errors"
 
 	"github.com/alibaba/sentinel-golang/core/flow"
-
-	"github.com/go-logr/logr"
+	datasourcev1 "github.com/alibaba/sentinel-golang/ext/datasource/k8s/api/v1"
+	"github.com/alibaba/sentinel-golang/logging"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	datasourcev1 "sentinel-go-k8s-crd-datasource/api/v1"
 )
 
 // FlowRulesReconciler reconciles a FlowRules object
 type FlowRulesReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Scheme          *runtime.Scheme
+	EffectiveCrName string
 }
 
 const (
@@ -56,23 +53,31 @@ const (
 
 func (r *FlowRulesReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	log := r.Log.WithValues("flow rules", req.NamespacedName)
+	logging.Info("receive FlowRules", "namespace", req.NamespacedName.String())
+
+	if req.Name != r.EffectiveCrName {
+		logging.Warn("ignore unregister cr.", "ns", req.Namespace, "crName", req.Name)
+		return ctrl.Result{
+			Requeue:      false,
+			RequeueAfter: 0,
+		}, nil
+	}
 
 	// your logic here
 	flowRulesCR := &datasourcev1.FlowRules{}
 	if err := r.Get(ctx, req.NamespacedName, flowRulesCR); err != nil {
-		log.Error(err, "Fail to get datasourcev1.FlowRules.")
+		logging.Error(err, "Fail to get datasourcev1.FlowRules.")
 		return ctrl.Result{
 			Requeue:      false,
 			RequeueAfter: 0,
 		}, err
 	}
-	log.Info("Receive datasourcev1.FlowRules", "rules:", flowRulesCR.Spec.Rules)
+	logging.Info("Receive datasourcev1.FlowRules", "rules:", flowRulesCR.Spec.Rules)
 
 	flowRules := r.assembleFlowRules(flowRulesCR)
 	_, err := flow.LoadRules(flowRules)
 	if err != nil {
-		log.Error(err, "Fail to Load flow.Rules")
+		logging.Error(err, "Fail to Load flow.Rules")
 		return ctrl.Result{
 			Requeue:      false,
 			RequeueAfter: 0,
@@ -103,7 +108,7 @@ func (r *FlowRulesReconciler) assembleFlowRules(rs *datasourcev1.FlowRules) []*f
 		case QPSMetricType:
 			cbRule.MetricType = flow.QPS
 		default:
-			r.Log.Error(errors.New("unsupported MetricType for flow.Rule"), rule.MetricType)
+			logging.Error("unsupported MetricType for flow.Rule", "metricType", rule.MetricType)
 			continue
 		}
 
@@ -113,7 +118,7 @@ func (r *FlowRulesReconciler) assembleFlowRules(rs *datasourcev1.FlowRules) []*f
 		case WarmUpTokenCalculateStrategy:
 			cbRule.TokenCalculateStrategy = flow.WarmUp
 		default:
-			r.Log.Error(errors.New("unsupported TokenCalculateStrategy for flow.Rule"), rule.TokenCalculateStrategy)
+			logging.Error("unsupported TokenCalculateStrategy for flow.Rule", "tokenCalculateStrategy", rule.TokenCalculateStrategy)
 			continue
 		}
 
@@ -123,7 +128,7 @@ func (r *FlowRulesReconciler) assembleFlowRules(rs *datasourcev1.FlowRules) []*f
 		case ThrottlingControlBehavior:
 			cbRule.ControlBehavior = flow.Throttling
 		default:
-			r.Log.Error(errors.New("unsupported ControlBehavior for flow.Rule"), rule.ControlBehavior)
+			logging.Error("unsupported ControlBehavior for flow.Rule", "controlBehavior", rule.ControlBehavior)
 			continue
 		}
 
@@ -133,7 +138,7 @@ func (r *FlowRulesReconciler) assembleFlowRules(rs *datasourcev1.FlowRules) []*f
 		case AssociatedResourceRelationStrategy:
 			cbRule.RelationStrategy = flow.AssociatedResource
 		default:
-			r.Log.Error(errors.New("unsupported RelationStrategy for flow.Rule"), rule.RelationStrategy)
+			logging.Error("unsupported RelationStrategy for flow.Rule", "relationStrategy", rule.RelationStrategy)
 			continue
 		}
 

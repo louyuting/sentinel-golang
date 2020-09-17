@@ -18,22 +18,20 @@ package controllers
 
 import (
 	"context"
-	"errors"
 
 	"github.com/alibaba/sentinel-golang/core/hotspot"
-	"github.com/go-logr/logr"
+	datasourcev1 "github.com/alibaba/sentinel-golang/ext/datasource/k8s/api/v1"
+	"github.com/alibaba/sentinel-golang/logging"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	datasourcev1 "sentinel-go-k8s-crd-datasource/api/v1"
 )
 
 // HotspotRulesReconciler reconciles a HotspotRules object
 type HotspotRulesReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Scheme          *runtime.Scheme
+	EffectiveCrName string
 }
 
 // +kubebuilder:rbac:groups=datasource.sentinel.io,resources=hotspotrules,verbs=get;list;watch;create;update;patch;delete
@@ -41,22 +39,30 @@ type HotspotRulesReconciler struct {
 
 func (r *HotspotRulesReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	log := r.Log.WithValues("hotspotrules", req.NamespacedName)
+	logging.Info("receive HotspotRules", "namespace", req.NamespacedName.String())
+
+	if req.Name != r.EffectiveCrName {
+		logging.Warn("ignore unregister cr.", "ns", req.Namespace, "crName", req.Name)
+		return ctrl.Result{
+			Requeue:      false,
+			RequeueAfter: 0,
+		}, nil
+	}
 
 	hotspotRulesCR := &datasourcev1.HotspotRules{}
 	if err := r.Get(ctx, req.NamespacedName, hotspotRulesCR); err != nil {
-		log.Error(err, "fail to get")
+		logging.Error(err, "Fail to get datasourcev1.HotspotRules")
 		return ctrl.Result{
 			Requeue:      false,
 			RequeueAfter: 0,
 		}, err
 	}
-	log.Info("Receive datasourcev1.HotspotRules", "rules:", hotspotRulesCR.Spec.Rules)
+	logging.Info("Receive datasourcev1.HotspotRules", "rules:", hotspotRulesCR.Spec.Rules)
 
 	hotspotRules := r.assembleHotspotRules(hotspotRulesCR)
 	_, err := hotspot.LoadRules(hotspotRules)
 	if err != nil {
-		log.Error(err, "Fail to Load hotspot.Rules")
+		logging.Error(err, "Fail to Load hotspot.Rules")
 		return ctrl.Result{
 			Requeue:      false,
 			RequeueAfter: 0,
@@ -88,7 +94,7 @@ func (r *HotspotRulesReconciler) assembleHotspotRules(rs *datasourcev1.HotspotRu
 		case QPSMetricType:
 			hotspotRule.MetricType = hotspot.QPS
 		default:
-			r.Log.Error(errors.New("unsupported MetricType for hotspot.Rule"), rule.MetricType)
+			logging.Error("unsupported MetricType for hotspot.Rule", "metricType", rule.MetricType)
 			continue
 		}
 
@@ -98,7 +104,7 @@ func (r *HotspotRulesReconciler) assembleHotspotRules(rs *datasourcev1.HotspotRu
 		case ThrottlingControlBehavior:
 			hotspotRule.ControlBehavior = hotspot.Throttling
 		default:
-			r.Log.Error(errors.New("unsupported ControlBehavior for hotspot.Rule"), rule.ControlBehavior)
+			logging.Error("unsupported ControlBehavior for hotspot.Rule", "controlBehavior", rule.ControlBehavior)
 			continue
 		}
 
@@ -117,7 +123,7 @@ func (r *HotspotRulesReconciler) assembleHotspotRules(rs *datasourcev1.HotspotRu
 			case "KindFloat64":
 				hotspotSpecificValue.ValKind = hotspot.KindFloat64
 			default:
-				r.Log.Error(errors.New("unsupported hotspot.SpecificValue.ValKind"), specificItem.ValKind)
+				logging.Error("unsupported hotspot.SpecificValue.ValKind", "valKind", specificItem.ValKind)
 				continue
 			}
 			hotspotRule.SpecificItems = append(hotspotRule.SpecificItems, hotspotSpecificValue)
