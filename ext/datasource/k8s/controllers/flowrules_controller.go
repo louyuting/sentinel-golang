@@ -36,16 +36,16 @@ type FlowRulesReconciler struct {
 
 const (
 	ConcurrencyMetricType string = "Concurrency"
-	QPSMetricType                = "QPS"
+	QPSMetricType         string = "QPS"
 
-	CurrentResourceRelationStrategy    = "CurrentResource"
-	AssociatedResourceRelationStrategy = "AssociatedResource"
+	CurrentResourceRelationStrategy    string = "CurrentResource"
+	AssociatedResourceRelationStrategy string = "AssociatedResource"
 
-	DirectTokenCalculateStrategy = "Direct"
-	WarmUpTokenCalculateStrategy = "WarmUp"
+	DirectTokenCalculateStrategy string = "Direct"
+	WarmUpTokenCalculateStrategy string = "WarmUp"
 
-	RejectControlBehavior     = "Reject"
-	ThrottlingControlBehavior = "Throttling"
+	RejectControlBehavior     string = "Reject"
+	ThrottlingControlBehavior string = "Throttling"
 )
 
 // +kubebuilder:rbac:groups=datasource.sentinel.io,resources=flowrules,verbs=get;list;watch;create;update;patch;delete

@@ -36,8 +36,8 @@ type CircuitBreakerRulesReconciler struct {
 
 const (
 	SlowRequestRatioStrategy string = "SlowRequestRatio"
-	ErrorRatioStrategy              = "ErrorRatio"
-	ErrorCountStrategy              = "ErrorCount"
+	ErrorRatioStrategy       string = "ErrorRatio"
+	ErrorCountStrategy       string = "ErrorCount"
 )
 
 // +kubebuilder:rbac:groups=datasource.sentinel.io,resources=circuitbreakerrules,verbs=get;list;watch;create;update;patch;delete
