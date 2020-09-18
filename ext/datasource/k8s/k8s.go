@@ -32,9 +32,9 @@ type CrdType int
 
 const (
 	FlowRulesCrd           CrdType = 1
-	CircuitBreakerRulesCrd         = 2
-	HotspotRulesCrd                = 3
-	SystemRulesCrd                 = 4
+	CircuitBreakerRulesCrd CrdType = 2
+	HotspotRulesCrd        CrdType = 3
+	SystemRulesCrd         CrdType = 4
 )
 
 func (c CrdType) String() string {
