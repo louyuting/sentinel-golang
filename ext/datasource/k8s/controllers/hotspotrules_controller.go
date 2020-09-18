@@ -77,6 +77,7 @@ func (r *HotspotRulesReconciler) assembleHotspotRules(rs *datasourcev1.HotspotRu
 
 	for _, rule := range rs.Spec.Rules {
 		hotspotRule := &hotspot.Rule{
+			ID:                rule.Id,
 			Resource:          rule.Resource,
 			MetricType:        0,
 			ControlBehavior:   0,

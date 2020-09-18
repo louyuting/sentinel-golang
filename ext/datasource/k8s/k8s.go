@@ -13,12 +13,14 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	// +kubebuilder:scaffold:imports
 )
 
 var (
 	scheme = runtime.NewScheme()
+	//setupLog = ctrl.Log.WithName("setup")
 )
 
 func init() {
@@ -26,6 +28,7 @@ func init() {
 
 	_ = datasourcev1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 }
 
 type CrdType int
@@ -71,8 +74,9 @@ func NewK8sDatasource() (*K8sDatasource, error) {
 		return nil, err
 	}
 	k := &K8sDatasource{
-		crdManager: mgr,
-		stopChan:   make(chan struct{}),
+		crdManager:  mgr,
+		controllers: make(map[CrdType]reconcile.Reconciler, 0),
+		stopChan:    make(chan struct{}),
 	}
 	return k, nil
 }

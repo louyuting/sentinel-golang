@@ -9,7 +9,7 @@ import (
 )
 
 // Level represents the level of logging.
-type Level uint8
+type Level int
 
 const (
 	DebugLevel Level = iota

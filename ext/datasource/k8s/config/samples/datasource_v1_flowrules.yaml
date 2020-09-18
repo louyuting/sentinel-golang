@@ -1,7 +1,7 @@
 apiVersion: datasource.sentinel.io/v1
 kind: FlowRules
 metadata:
-  name: flowrules-sample2
+  name: sentinel-go-flow-rules
 spec:
   rules:
     - resource: abcde

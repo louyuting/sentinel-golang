@@ -91,6 +91,7 @@ func (r *FlowRulesReconciler) assembleFlowRules(rs *datasourcev1.FlowRules) []*f
 
 	for _, rule := range rs.Spec.Rules {
 		cbRule := &flow.Rule{
+			ID:                     rule.Id,
 			Resource:               rule.Resource,
 			MetricType:             0,
 			TokenCalculateStrategy: 0,

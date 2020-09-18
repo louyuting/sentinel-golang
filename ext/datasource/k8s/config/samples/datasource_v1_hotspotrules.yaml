@@ -1,7 +1,7 @@
 apiVersion: datasource.sentinel.io/v1
 kind: HotspotRules
 metadata:
-  name: hotspotrules-sample
+  name: sentinel-go-hotspot-rules
 spec:
   rules:
     - resource: test1

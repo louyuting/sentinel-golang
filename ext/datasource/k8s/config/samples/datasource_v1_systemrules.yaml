@@ -1,7 +1,7 @@
 apiVersion: datasource.sentinel.io/v1
 kind: SystemRules
 metadata:
-  name: systemrules-sample
+  name: sentinel-go-system-rules
 spec:
   # Add fields here
   rules:

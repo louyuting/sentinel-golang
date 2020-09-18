@@ -76,6 +76,7 @@ func (r *SystemRulesReconciler) assembleSystemRules(rs *datasourcev1.SystemRules
 	ret := make([]*system.Rule, 0, len(rs.Spec.Rules))
 	for _, rule := range rs.Spec.Rules {
 		systemRule := &system.Rule{
+			ID:           rule.Id,
 			MetricType:   0,
 			TriggerCount: 0,
 			Strategy:     0,
