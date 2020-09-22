@@ -43,5 +43,6 @@ func checkPass(ctx *base.EntryContext) (bool, *Rule, uint32) {
 			}
 		}
 	}
+	// the second returned value is nil when check passed
 	return true, nil, curCount
 }

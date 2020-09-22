@@ -90,10 +90,8 @@ func getRulesOfResource(res string) []*Rule {
 	if !exist {
 		return nil
 	}
-	ret := make([]*Rule, 0, len(resRules))
-	for _, r := range resRules {
-		ret = append(ret, r)
-	}
+	ret := make([]*Rule, len(resRules), len(resRules))
+	copy(ret, resRules)
 	return ret
 }
 

@@ -32,7 +32,7 @@ func TestLoadRules(t *testing.T) {
 		assert.True(t, ruleMap["abc1"][0] == r1)
 		assert.True(t, len(ruleMap["abc2"]) == 1)
 		assert.True(t, ruleMap["abc2"][0] == r2)
-
+		assert.True(t, len(getRulesOfResource("abc1")) == 1)
 		err = ClearRules()
 		assert.True(t, err == nil)
 	})
