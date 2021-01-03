@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"sync"
 	"testing"
 
 	"github.com/go-redis/redis/v8"
@@ -48,12 +47,8 @@ func Benchmark_1(b *testing.B) {
 	})
 
 	redisTokenServer := RedisTokenServer{
-		redisCli:                rdb,
-		rwMux:                   sync.RWMutex{},
-		resClusterTokenResetMap: make(map[string]*redisTokenResetSlidingWindow),
+		redisCli: rdb,
 	}
-	redisTokenServer.resClusterTokenResetMap[testResource] = redisTokenServer.newResourceTokenReset(testResource, 1000)
-
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.SetParallelism(100)
@@ -76,6 +71,14 @@ var ctx = context.Background()
 //		Password: "", // no password set
 //		DB:       0,  // use default DB
 //	})
+//	incr1, err1 := rdb.Incr(ctx, "testincr1").Result()
+//	fmt.Println(incr1)
+//	fmt.Println(err1)
+//
+//	incr1, err1 = rdb.IncrBy(ctx, "testincr1", 1000).Result()
+//	fmt.Println(incr1)
+//	fmt.Println(err1)
+//
 //	err := rdb.Set(ctx, "key1", "value1", 0).Err()
 //	if err != nil {
 //		panic(err)

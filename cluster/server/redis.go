@@ -2,63 +2,82 @@ package server
 
 import (
 	"context"
-	"sync"
-	"sync/atomic"
+	"strconv"
+	"time"
 
-	sbase "github.com/alibaba/sentinel-golang/core/stat/base"
+	"github.com/alibaba/sentinel-golang/cluster/client"
 	"github.com/alibaba/sentinel-golang/logging"
+	"github.com/alibaba/sentinel-golang/util"
 	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
 )
 
-const InvalidTokenCount = -1
+const (
+	InvalidTokenCount   = -1
+	redisResourcePrefix = "sentinel-go-##-"
+)
+
+type expireKey struct {
+	tokenKey   string
+	intervalMs time.Duration
+}
+
+func (e expireKey) String() string {
+	return e.tokenKey + "/" + strconv.Itoa(int(e.intervalMs.Milliseconds()))
+}
 
 type RedisTokenServer struct {
-	redisCli                *redis.Client
-	rwMux                   sync.RWMutex
-	resClusterTokenResetMap map[string]*redisTokenResetSlidingWindow
-}
-
-// redisTokenResetSlidingWindow is responsible for cluster token reset based on time
-type redisTokenResetSlidingWindow struct {
 	redisCli *redis.Client
-	resource string
-	data     *sbase.LeapArray
+	// sized
+	expireChan chan expireKey
+
+	ctx context.Context
 }
 
-func (r *redisTokenResetSlidingWindow) NewEmptyBucket() interface{} {
-	return struct{}{}
-}
-
-func (r *redisTokenResetSlidingWindow) ResetBucketTo(bw *sbase.BucketWrap, startTime uint64) *sbase.BucketWrap {
-	redisCli := r.redisCli
-
-	ctx, cancel := context.WithTimeout(context.Background(), redisCli.Options().WriteTimeout)
-	defer cancel()
-	_, err := redisCli.Del(ctx, r.resource).Result()
-	// if fail to clear resource token, don't reset bucket start time and wait for next reset operation
-	if err != nil {
-		logging.Error(err, "Fail to clear resource token in redisTokenResetSlidingWindow#ResetBucketTo", "resource", r.resource)
-		return bw
+func NewTokenService(cli *redis.Client) client.TokenService {
+	ret := &RedisTokenServer{
+		redisCli:   cli,
+		expireChan: make(chan expireKey, 10),
+		ctx:        context.Background(),
 	}
-	atomic.StoreUint64(&bw.BucketStart, startTime)
-	return bw
+	go util.RunWithRecover(ret.expireLoop)
+	return ret
 }
 
-func newResourceTokenResetSlidingWindow(redisCli *redis.Client, resource string, intervalMs uint32) *redisTokenResetSlidingWindow {
-	redisTokenWindow := &redisTokenResetSlidingWindow{
-		redisCli: redisCli,
-		resource: resource,
-		data:     nil,
+func (r *RedisTokenServer) expireLoop() {
+	cli := r.redisCli
+	for {
+		// TODO rethink here
+		var expireK *expireKey
+		select {
+		case key := <-r.expireChan:
+			ctx, cancel := context.WithTimeout(context.Background(), cli.Options().ReadTimeout)
+			// expire key
+			succ, err := r.redisCli.PExpire(ctx, key.tokenKey, key.intervalMs).Result()
+			cancel()
+			if err != nil {
+				expireK = &expireKey{
+					tokenKey:   key.tokenKey,
+					intervalMs: key.intervalMs,
+				}
+				logging.Error(err, "Fail to expire token key", "key", key.String())
+				break
+			} else if !succ {
+				expireK = &expireKey{
+					tokenKey:   key.tokenKey,
+					intervalMs: key.intervalMs,
+				}
+				logging.Warn("Expire token key failed", "key", key.String())
+				break
+			}
+			expireK = nil
+		case <-r.ctx.Done():
+			return
+		}
+		if expireK != nil {
+			r.expireChan <- *expireK
+		}
 	}
-	// TODO, LeapArray pre init start time, maybe need to improve it.
-	la, _ := sbase.NewLeapArray(1, intervalMs, redisTokenWindow)
-	redisTokenWindow.data = la
-	return redisTokenWindow
-}
-
-func (r *RedisTokenServer) newResourceTokenReset(resource string, intervalMs uint32) *redisTokenResetSlidingWindow {
-	return newResourceTokenResetSlidingWindow(r.redisCli, resource, intervalMs)
 }
 
 func (r *RedisTokenServer) AcquireFlowToken(resource string, tokenCount uint32, statIntervalInMs uint32) (curCount int64, err error) {
@@ -69,39 +88,27 @@ func (r *RedisTokenServer) AcquireFlowToken(resource string, tokenCount uint32, 
 	if tokenCount == 0 {
 		return InvalidTokenCount, errors.New("token count is zero")
 	}
-
-	// check whether reset token count
-	r.rwMux.RLock()
-	resourceTokenWindow, ok := r.resClusterTokenResetMap[resource]
-	r.rwMux.RUnlock()
-	if ok {
-		// check token reset logic
-		_, e := resourceTokenWindow.data.CurrentBucket(resourceTokenWindow)
-		if e != nil {
-			logging.Error(e, "Fail to check cluster token reset in RedisTokenServer#AcquireToken")
-		}
-	} else {
-		r.rwMux.Lock()
-		resourceTokenWindow, ok = r.resClusterTokenResetMap[resource]
-		if !ok {
-			// double check
-			resourceTokenWindow = r.newResourceTokenReset(resource, statIntervalInMs)
-			r.resClusterTokenResetMap[resource] = resourceTokenWindow
-		}
-		r.rwMux.Unlock()
-		_, e := resourceTokenWindow.data.CurrentBucket(resourceTokenWindow)
-		if e != nil {
-			logging.Error(e, "Fail to check cluster token reset in RedisTokenServer#AcquireToken")
-		}
-	}
+	tokenKey := r.buildResourceKey(resource, statIntervalInMs)
 
 	redisCli := r.redisCli
-
 	ctx, cancel := context.WithTimeout(context.Background(), redisCli.Options().ReadTimeout)
 	defer cancel()
-	currentVal, err := redisCli.Incr(ctx, resource).Result()
-	if err == nil || err == redis.Nil {
+	currentVal, err := redisCli.IncrBy(ctx, tokenKey, int64(tokenCount)).Result()
+	if err == nil {
+		// only one instance meets this condition
+		if currentVal == int64(tokenCount) {
+			r.expireChan <- expireKey{
+				tokenKey:   tokenKey,
+				intervalMs: time.Duration(statIntervalInMs) * time.Millisecond,
+			}
+		}
 		return currentVal, nil
 	}
 	return InvalidTokenCount, err
+}
+
+func (r *RedisTokenServer) buildResourceKey(res string, statIntervalInMs uint32) string {
+	nowMs := util.CurrentTimeMillis()
+	startTimeMs := nowMs - (nowMs % uint64(statIntervalInMs))
+	return redisResourcePrefix + res + ":" + strconv.Itoa(int(startTimeMs))
 }
