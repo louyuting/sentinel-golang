@@ -13,8 +13,8 @@ import (
 	"github.com/alibaba/sentinel-golang/core/flow"
 	"github.com/alibaba/sentinel-golang/ext/datasource"
 	"github.com/alibaba/sentinel-golang/logging"
-	"github.com/alibaba/sentinel-golang/pkg/datasource/consul"
 	"github.com/hashicorp/consul/api"
+	"github.com/louyuting/sentinel-golang/pkg/datasource/consul"
 )
 
 func main() {

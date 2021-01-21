@@ -1,4 +1,4 @@
-module github.com/alibaba/sentinel-golang/pkg/datasource/consul
+module github.com/louyuting/sentinel-golang/pkg/datasource/consul
 
 go 1.13
 
